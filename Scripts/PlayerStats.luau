@@ -1,57 +1,62 @@
-local playerstats = {} -- module table to hold the functions and data for player stats
-local states = {} -- table to hold the states for each player
+local playerstats = {} -- Table other scripts will use.
+local states = {} -- Holds the states for each player.
 
+-- Returns all of a player's states.
 function playerstats.ReturnStates(plr)
-	return states[plr] -- returns the table of states for the player, or nil if no states exist
+	return states[plr] -- Nil if the player has none.
 end
 
+-- Returns one state from a player.
 function playerstats.GetState(plr, statekey)
-	if states[plr] then -- check if the player has any states	
-		return states[plr][statekey] -- return the value of the specific statekey
+	if states[plr] then -- If the player has states...
+		return states[plr][statekey] -- Return the one asked for.
 	end
-	return nil -- return nil if the player has no states
+	return nil -- No states, return nil.
 end
 
+-- Sets a state on a player, and removes it after a duration if one is given.
 function playerstats.SetState(plr, statekey, value, duration)
-	if not states[plr] then -- check if the player is in the states table, if not create a new table for them
-		states[plr] = {} -- create a new table for the player to hold their states
+	if not states[plr] then -- If the player has no table yet...
+		states[plr] = {} -- Create one.
 	end
-	states[plr][statekey] = value -- set the value of the specific statekey for the player
-	if duration and type(duration) == "number" then -- check if a duration is provided and is a number
-		task.delay(duration, function() -- delays the next funaction for removing the state
-			if states[plr] and states[plr][statekey] == value then -- A check to prevent an error
-				states[plr][statekey] = nil -- remove the statekey from the player's states table
-				if next(states[plr]) == nil then -- check if the player's states table is empty
-					states[plr] = nil -- remove the player's states table if it's empty
+	states[plr][statekey] = value -- Set the state.
+	if duration and type(duration) == "number" then -- If a duration was given...
+		task.delay(duration, function() -- Wait, then remove the state.
+			if states[plr] and states[plr][statekey] == value then -- Make sure it still exists and wasn't changed.
+				states[plr][statekey] = nil -- Remove the state.
+				if next(states[plr]) == nil then -- If the player has no states left...
+					states[plr] = nil -- Remove their table.
 				end
 			end
 		end)
 	end
 end
 
+-- Removes one state from a player, or all of them if no key is given.
 function playerstats.RemoveStats(plr, statekey)
-	if not states[plr] then return end -- check if the player has any states, if not return
-	if statekey then  -- check if a statekey is provided
-		states[plr][statekey] = nil -- remove the specific statekey from the player's states table
-		if next(states[plr]) == nil then -- check if the player's states table is empty
-			states[plr] = nil -- remove the player's states table if it's empty
+	if not states[plr] then return end -- Stop if the player has no states.
+	if statekey then -- If a key was given...
+		states[plr][statekey] = nil -- Remove that state.
+		if next(states[plr]) == nil then -- If the player has no states left...
+			states[plr] = nil -- Remove their table.
 		end
 	else
-		states[plr] = nil -- remove the player's states table if no statekey is provided
+		states[plr] = nil -- No key, remove everything.
 	end
 end
--- this is meant is a true reset for bugs ... reading back  i don't know why i writen 2 funactions doing nearly identical things
+
+-- Full reset for bugs, does nearly the same as RemoveStats.
 function playerstats.ClearAllStats(plr)
-	if states[plr] then -- check if the player has any states
-		for statekey in pairs(states[plr]) do -- a loop to iterate through all the statekeys for the player
-			plr:SetAttribute(statekey, nil) -- remove the attribute for the statekey from the player
+	if states[plr] then -- If the player has states...
+		for statekey in pairs(states[plr]) do -- Go through every state.
+			plr:SetAttribute(statekey, nil) -- Clear the attribute with the same name.
 		end
 	end
-	states[plr] = nil -- remove the player's states table from the states table
+	states[plr] = nil -- Remove the player's table.
 end
 
 game.Players.PlayerRemoving:Connect(function(plr)
-	states[plr] = nil -- clear the states for the player when they leave the game (avoids memory leaks)
+	states[plr] = nil -- Clear their states when they leave.
 end)
 
-return playerstats -- return the playerstats module so it can return values to other scripts that require it
+return playerstats -- Give the table to whoever requires this script.
