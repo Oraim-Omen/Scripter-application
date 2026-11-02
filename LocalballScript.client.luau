@@ -6,6 +6,8 @@ local uis = game:GetService("UserInputService")
 -- the module that keeps track of player states and the one that decides what they can do
 local playerstats = require(replicatedstorage:WaitForChild("Scripts"):WaitForChild("PlayerStats"))
 local canplayer = require(replicatedstorage:WaitForChild("Scripts"):WaitForChild("CanPlayer"))
+local Inputs = require(replicatedstorage:WaitForChild("Scripts"):WaitForChild("InputManager"))
+local contextactionutility = require(replicatedstorage:WaitForChild("Scripts"):WaitForChild("ContextActionUtility")) -- makes the mobile buttons (cancel charge, pass toggle)
 -- since the script is inside of the tool this is a way to refrence everything else
 local tool = script.Parent
 --events yeah no point of explaining this
@@ -123,10 +125,53 @@ local function toggletarget()
 	end
 	return passmode
 end
+-- cancels the charge, used by the V key and the mobile cancel button
+local function cancelcharge()
+	if playerstats.GetState(player, "Charging") then
+		playerstats.SetState(player, "Charging", false)
+		StopChargeanimation()
+		chargingevent:FireServer("cancel")
+		if target1 and target1:FindFirstChild("Highlight") then
+			target1.Highlight:Destroy()
+		end
+	end
+end
+
+-- MOBILE BUTTONS
+-- they are only made while the ball is equipped (see Equipped and Unequipped below), so they only show when you are holding it
+-- no keys are given to BindAction, so they only react to touch, the keyboard keeps using the handlers further down
+-- while charging, a finger holds the screen, so the cancel button is pressed with a second finger
+local function cancelaction(_, inputstate)
+	if inputstate == Enum.UserInputState.Begin then
+		cancelcharge()
+	end
+end
+
+local function passaction(_, inputstate)
+	if inputstate == Enum.UserInputState.Begin then
+		toggletarget()
+		contextactionutility:SetTitle("TogglePass", passmode and "Pass" or "Throw") -- the text shows the current mode
+	end
+end
+
+local function addmobilebuttons()
+	contextactionutility:BindAction("CancelCharge", cancelaction, true)
+	contextactionutility:SetTitle("CancelCharge", "Cancel")
+
+	contextactionutility:BindAction("TogglePass", passaction, true)
+	contextactionutility:SetTitle("TogglePass", passmode and "Pass" or "Throw")
+end
+
+local function removemobilebuttons()
+	contextactionutility:UnbindAction("CancelCharge")
+	contextactionutility:UnbindAction("TogglePass")
+end
+
 --sets up after the ball/tool for that player
 tool.Equipped:Connect(function()
 	equipedevent:FireServer() -- tell the server the player has equipped the tool
 	print("Tool equipped")
+	addmobilebuttons()
 end)
 -- the player will drop the ball if they triad to have it in thair inventory
 tool.Unequipped:Connect(function()
@@ -136,7 +181,10 @@ tool.Unequipped:Connect(function()
 	if target1 and target1:FindFirstChild("Highlight") then
 		target1.Highlight:Destroy()
 	end
+	removemobilebuttons()
 end)
+-- the tool is destroyed when the player dies so the buttons are removed here too
+humanoid.Died:Connect(removemobilebuttons)
 -- player will starts charging up the ball/tool sending info to the serever till it is deactived
 tool.Activated:Connect(function()
 	playerstats.SetState(player, "Charging", true)
@@ -148,19 +196,14 @@ end)
 -- V cancels the charge
 uis.InputBegan:Connect(function(input, gpe)
 	if gpe then return end
-	if input.KeyCode == Enum.KeyCode.V and playerstats.GetState(player, "Charging") then
-		playerstats.SetState(player, "Charging", false)
-		StopChargeanimation()
-		chargingevent:FireServer("cancel")
-		if target1 and target1:FindFirstChild("Highlight") then
-			target1.Highlight:Destroy()
-		end
+	if Inputs.Is(input, "CancelCharge") then
+		cancelcharge()
 	end
 end)
 -- swiching up the team to pass to, no ui in which the player targets
 uis.InputBegan:Connect(function(input, gpe)
 if gpe then return end
-	if input.KeyCode == Enum.KeyCode.R then
+	if Inputs.Is(input, "TogglePass") then
 		print("targetteamate")
 		toggletarget()
     end
@@ -212,19 +255,22 @@ rs.Heartbeat:connect(function()
 		lastSeenTime = tick()
 	end
 end)
--- a way for the player to choose which kind of throw to use
-uis.InputBegan:Connect(function(input, gameProcessedEvent)
-	if gameProcessedEvent then return end
-	if input.KeyCode == Enum.KeyCode.S then
-		overhead, rside, lside = true, false, false
-	elseif input.KeyCode == Enum.KeyCode.W then
-		overhead, rside, lside = false, false, false
-	elseif input.KeyCode == Enum.KeyCode.D then
-		rside, overhead, lside = true, false, false
-	elseif input.KeyCode == Enum.KeyCode.A then
-		lside, overhead, rside = true, false, false
+-- works out the throw type from the direction the player is moving compared to where they face
+local function updateThrowDirection()
+	local move = hrp.CFrame:VectorToObjectSpace(humanoid.MoveDirection)
+	overhead, rside, lside = false, false, false
+	if move.Magnitude < 0.1 then return end -- standing still is a direct throw
+	if math.abs(move.X) > math.abs(move.Z) then
+		if move.X > 0 then
+			rside = true
+		else
+			lside = true
+		end
+	elseif move.Z > 0 then
+		overhead = true -- moving backwards
 	end
-end)
+	-- moving forward leaves everything false which is a direct throw
+end
 
 -- throws the ball and truns to normal state
 tool.Deactivated:Connect(function()
@@ -240,6 +286,7 @@ tool.Deactivated:Connect(function()
 		playerstats.SetState(player, "Charging", false)
 		print("deactivted")
 		print(target1)
+		updateThrowDirection() -- checks which way the player is moving right as they throw
 		throwevent:FireServer(drop, overhead, rside, lside, target1)
 		target1 = nil
     end
