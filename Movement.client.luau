@@ -27,6 +27,8 @@ local animator = humanoid:FindFirstChildOfClass("Animator") or humanoid:WaitForC
 local playerstats = require(scripts:WaitForChild("PlayerStats")) -- keeps the player's states (Dashing, Sliding, Hanging...)
 local canplayer = require(scripts:WaitForChild("CanPlayer")) -- checks if an action is allowed right now (CanDash, CanSlide...)
 local soundmanager = require(scripts:WaitForChild("SoundManager")) -- plays sounds through the server so everyone hears them
+local Inputs = require(scripts:WaitForChild("InputManager")) -- the buttons for every action (keyboard and controller)
+local contextactionutility = require(scripts:WaitForChild("ContextActionUtility")) -- makes the mobile buttons (dash, run, crouch)
 local anims = require(script.Parent:WaitForChild("AnimationData"))(animator) -- loads all the animation tracks
 
 local linearvelocity = Rootpart:WaitForChild("LinearVelocity") -- constraint in the root part that moves the player for dashes, slides and ledge hangs
@@ -82,6 +84,12 @@ local inair = false
 local iscroching = false
 local ismoving = false
 local hitby -- whatever last hit the player, handleImpact ignores it so the player doesn't bump into it
+local mobilerunheld = false -- true while the mobile run button is held down
+
+-- true while the run key or the mobile run button is held (the run loops check this instead of Inputs.IsDown)
+local function runheld()
+	return Inputs.IsDown("Run") or mobilerunheld
+end
 
 -- re-grabs the LinearVelocity after a respawn
 local function setupHumanoid(_)
@@ -150,28 +158,39 @@ local function dash(direction, track)
 		end)
 	end
 end
--- each dash key and its direction and animation
-local DASH_INPUTS = {
-	[Enum.KeyCode.A] = {direction = Vector3.new(-100, 2, 0), track = ldashtrack},
-	[Enum.KeyCode.D] = {direction = Vector3.new(100, 2, 0), track = Rdashtrack},
-	[Enum.KeyCode.W] = {direction = Vector3.new(0, 2, -100), track = Fdashtrack},
-	[Enum.KeyCode.S] = {direction = Vector3.new(0, 2, 100), track = Bdashtrack},
+-- the four dashes, each with its direction and animation
+local DASHES = {
+	Left = {direction = Vector3.new(-100, 2, 0), track = ldashtrack},
+	Right = {direction = Vector3.new(100, 2, 0), track = Rdashtrack},
+	Forward = {direction = Vector3.new(0, 2, -100), track = Fdashtrack},
+	Back = {direction = Vector3.new(0, 2, 100), track = Bdashtrack},
 }
--- Q + a movement key = dash, not in the air or while running
--- if more than one movement key is held only the first match counts (A, D, W, S), which prevents conflicts
-UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
-	if gameProcessedEvent then return end
-	if input.KeyCode ~= Enum.KeyCode.Q then return end
-	if inair or running then return end
-	if UserInputService:IsKeyDown(Enum.KeyCode.A) then
-		dash(DASH_INPUTS[Enum.KeyCode.A].direction, DASH_INPUTS[Enum.KeyCode.A].track)
-	elseif UserInputService:IsKeyDown(Enum.KeyCode.D) then
-		dash(DASH_INPUTS[Enum.KeyCode.D].direction, DASH_INPUTS[Enum.KeyCode.D].track)
-	elseif UserInputService:IsKeyDown(Enum.KeyCode.W) then
-		dash(DASH_INPUTS[Enum.KeyCode.W].direction, DASH_INPUTS[Enum.KeyCode.W].track)
-	elseif UserInputService:IsKeyDown(Enum.KeyCode.S) then
-		dash(DASH_INPUTS[Enum.KeyCode.S].direction, DASH_INPUTS[Enum.KeyCode.S].track)
+-- picks the dash from the way the player is moving compared to where they face, nothing if they aren't moving
+local function getDash()
+	local move = Rootpart.CFrame:VectorToObjectSpace(humanoid.MoveDirection)
+	if move.Magnitude < 0.1 then return nil end
+	if math.abs(move.X) > math.abs(move.Z) then
+		return move.X > 0 and DASHES.Right or DASHES.Left
+	else
+		return move.Z > 0 and DASHES.Back or DASHES.Forward
 	end
+end
+-- dash in the direction the player is moving, not in the air or while running
+-- used by both the B key and the mobile dash button
+local function trydash()
+	if inair or running then return end
+	local chosen = getDash()
+	print("dash chosen:", chosen)
+	if chosen then
+		dash(chosen.direction, chosen.track)
+	end
+end
+-- B = dash
+UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
+	if not Inputs.Is(input, "Dash") then return end
+	print("B pressed | processed:", gameProcessedEvent, "| inair:", inair, "| running:", running, "| move:", humanoid.MoveDirection)
+	if gameProcessedEvent then return end
+	trydash()
 end)
 
 
@@ -209,135 +228,151 @@ velocityevent.OnClientEvent:Connect(function(causedby, ifunbalanced, duration)
 		end)
 	end
 end)
--- tap Q = dash (handled above), hold Q for 0.24s while moving = run
+-- hold Q (or the mobile run button) for 0.24s while moving = run
 -- running starts at walkspeed 30 and speeds up by acc every 0.1s until runningspeed
-UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
-if gameProcessedEvent then return end
-	if input.KeyCode == Enum.KeyCode.Q then
-		task.delay(0.24, function()
-			if ismoving and UserInputService:IsKeyDown(Enum.KeyCode.Q) then
-			    local sliding = playerstats.GetState(player, "Sliding")	
-		        running = true
-				humanoid.WalkSpeed = 30
-				print("player is running")
-				while running and ismoving and UserInputService:IsKeyDown(Enum.KeyCode.Q) and not sliding do
-					task.wait(0.1)
-					humanoid.WalkSpeed += acc
+local function startrun()
+	task.delay(0.24, function()
+		if ismoving and runheld() then
+		    local sliding = playerstats.GetState(player, "Sliding")	
+	        running = true
+			humanoid.WalkSpeed = 30
+			print("player is running")
+			while running and ismoving and runheld() and not sliding do
+				task.wait(0.1)
+				humanoid.WalkSpeed += acc
+				currentspeed = humanoid.WalkSpeed
+				if humanoid.WalkSpeed > runningspeed then
+					humanoid.WalkSpeed = runningspeed
 					currentspeed = humanoid.WalkSpeed
-					if humanoid.WalkSpeed > runningspeed then
-						humanoid.WalkSpeed = runningspeed
-						currentspeed = humanoid.WalkSpeed
-								print("Max Running Speed")		
-								
-					end
+							print("Max Running Speed")		
+							
 				end
 			end
-		end)
+		end
+	end)
+end
+-- releasing Q (or the mobile run button) slows the player down by deacc every 0.1s until they reach the base speed
+local function stoprun()
+	running = false
+	while not running and not runheld() do
+		task.wait(0.1)
+		if humanoid.WalkSpeed < baseSpeed then
+			humanoid.WalkSpeed = baseSpeed
+			currentspeed = humanoid.WalkSpeed
+			print("Player is in walking state")
+			break
+		end
+		humanoid.WalkSpeed -= deacc
+		currentspeed = humanoid.WalkSpeed
+	end
+end
+
+UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
+	if gameProcessedEvent then return end
+	if Inputs.Is(input, "Run") then
+		startrun()
     end
 end)
--- releasing Q slows the player down by deacc every 0.1s until they reach the base speed
+
 UserInputService.InputEnded:Connect(function(input, gameProcessedEvent)
 	if gameProcessedEvent then return end
-	if input.KeyCode == Enum.KeyCode.Q then
-		running = false
-		while not running and not UserInputService:IsKeyDown(Enum.KeyCode.Q) do
-			task.wait(0.1)
-			if humanoid.WalkSpeed < baseSpeed then
-				humanoid.WalkSpeed = baseSpeed
-				currentspeed = humanoid.WalkSpeed
-				print("Player is in walking state")
-				break
-			end
-			humanoid.WalkSpeed -= deacc
-			currentspeed = humanoid.WalkSpeed
-		end
+	if Inputs.Is(input, "Run") then
+		stoprun()
 	end
 end)
 
--- C key, what it does depends on the situation (checked in this order):
+-- C key (or the mobile crouch button), what it does depends on the situation (checked in this order):
 -- slide / stand up from a slide / crouch / knee tuck
+local function crouchpressed()
+	local kneetucked = playerstats.GetState(player, "KneeTucked")
+	print("player is cansliding:".. tostring(canplayer.CanSlide(player)))
+	print("player is moving: ".. tostring(ismoving))
+	print("player is running: ".. tostring(running))
+	-- SLIDE: needs to be allowed, moving, walkspeed above 30 (so running) and on the ground
+	-- the slide isn't affected by gravity or slopes, it just loses speed over time
+	if canplayer.CanSlide(player) and ismoving and humanoid.WalkSpeed > 30  and not inair then
+		humanoid.AutoRotate = false
+		linearvelocity.VectorVelocity = Vector3.new(0, 1, -currentspeed) -- pushes the player forward at the running speed
+		linearvelocity.Enabled = true
+		soundmanager.loopserver(slide, Rootpart, true)
+		slidetrack:Play()
+		slidetrack:AdjustSpeed(humanoid.WalkSpeed / 20) -- faster animation at higher speed
+		print("slide")
+		playerstats.SetState(player, "Sliding", true)
+		currentspeed = humanoid.WalkSpeed
+		if slidetrack.Ended then
+			slidingtrack:Play() -- the looping slide animation
+		end
+		-- every 0.01s the slide loses 0.5 speed, the push follows currentspeed
+		task.spawn(function()
+			while playerstats.GetState(player, "Sliding") and currentspeed > 8 do
+				task.wait(0.01)
+				currentspeed -= 0.5
+				humanoid.WalkSpeed = currentspeed
+				linearvelocity.VectorVelocity = Vector3.new(0, 0.5, -currentspeed)
+				print(currentspeed)
+			end
+			-- the slide ran out of speed (and wasn't already ended by the player): get up and give control back
+			if currentspeed <= 8 and playerstats.GetState(player, "Sliding") then
+				humanoid.WalkSpeed = baseSpeed
+				linearvelocity.VectorVelocity = Vector3.new(0, 0, 0)
+				slidingtrack:Stop()
+				soundmanager.loopserver(slide.Name, Rootpart, false)
+				getuptrack:Play()
+				getuptrack.Ended:Wait()
+				playerstats.SetState(player, "Sliding", false)
+				humanoid.AutoRotate = true
+				linearvelocity.Enabled = false
+			end
+		end)
+	-- STAND UP: pressing C again during a slide ends it early, the get-up animation is faster at higher speed
+	elseif playerstats.GetState(player, "Sliding") then
+		getuptrack:Play()
+		slidingtrack:Stop()
+		soundmanager.loopserver(slide.Name, Rootpart, false)
+		getuptrack:AdjustSpeed(humanoid.WalkSpeed / 9)
+		linearvelocity.Enabled = false
+		humanoid.AutoRotate = true
+		playerstats.SetState(player, "Sliding", false)
+	-- CROUCH: only when standing still on the ground, walkspeed drops to 8
+	elseif not ismoving and not inair and not iscroching then
+		iscroching = true
+		humanoid.WalkSpeed = 8
+		crouchitrack:Play()
+		vaulttrack.Priority = Enum.AnimationPriority.Core -- lowers the vault animation's priority while crouched, set back when standing up
+	-- KNEE TUCK: in the air, stays tucked until the humanoid's next state change (the landing)
+	elseif inair and not playerstats.GetState(player, "Sliding") and not iscroching and not kneetucked then
+		kneetucktrack:Play()
+		playerstats.SetState(player, "KneeTucked", true)
+		humanoid.StateChanged:Wait(Enum.HumanoidStateType.Landed)
+		kneetucktrack:Stop()
+		playerstats.RemoveStats(player, "KneeTucked")
+	end
+end
+
+-- releasing C (or the mobile crouch button) stands back up from a crouch
+local function crouchreleased()
+	if iscroching then
+		iscroching = false
+		humanoid.WalkSpeed = baseSpeed
+		crouchitrack:Stop()
+		crouchmmtrack:Stop()
+		vaulttrack.Priority = Enum.AnimationPriority.Action3 -- back to the vault animation's normal priority
+		humanoid.AutoRotate = true
+	end
+end
+
 UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
 	if gameProcessedEvent then return end
-	if input.KeyCode == Enum.KeyCode.C then
-		local kneetucked = playerstats.GetState(player, "KneeTucked")
-		print("player is cansliding:".. tostring(canplayer.CanSlide(player)))
-		print("player is moving: ".. tostring(ismoving))
-		print("player is running: ".. tostring(running))
-		-- SLIDE: needs to be allowed, moving, walkspeed above 30 (so running) and on the ground
-		-- the slide isn't affected by gravity or slopes, it just loses speed over time
-		if canplayer.CanSlide(player) and ismoving and humanoid.WalkSpeed > 30  and not inair then
-			humanoid.AutoRotate = false
-			linearvelocity.VectorVelocity = Vector3.new(0, 1, -currentspeed) -- pushes the player forward at the running speed
-			linearvelocity.Enabled = true
-			soundmanager.loopserver(slide, Rootpart, true)
-			slidetrack:Play()
-			slidetrack:AdjustSpeed(humanoid.WalkSpeed / 20) -- faster animation at higher speed
-			print("slide")
-			playerstats.SetState(player, "Sliding", true)
-			currentspeed = humanoid.WalkSpeed
-			if slidetrack.Ended then
-				slidingtrack:Play() -- the looping slide animation
-			end
-			-- every 0.01s the slide loses 0.5 speed, the push follows currentspeed
-			task.spawn(function()
-				while playerstats.GetState(player, "Sliding") and currentspeed > 8 do
-					task.wait(0.01)
-					currentspeed -= 0.5
-					humanoid.WalkSpeed = currentspeed
-					linearvelocity.VectorVelocity = Vector3.new(0, 0.5, -currentspeed)
-					print(currentspeed)
-				end
-				-- the slide ran out of speed (and wasn't already ended by the player): get up and give control back
-				if currentspeed <= 8 and playerstats.GetState(player, "Sliding") then
-					humanoid.WalkSpeed = baseSpeed
-					linearvelocity.VectorVelocity = Vector3.new(0, 0, 0)
-					slidingtrack:Stop()
-					soundmanager.loopserver(slide.Name, Rootpart, false)
-					getuptrack:Play()
-					getuptrack.Ended:Wait()
-					playerstats.SetState(player, "Sliding", false)
-					humanoid.AutoRotate = true
-					linearvelocity.Enabled = false
-				end
-			end)
-		-- STAND UP: pressing C again during a slide ends it early, the get-up animation is faster at higher speed
-		elseif playerstats.GetState(player, "Sliding") then
-			getuptrack:Play()
-			slidingtrack:Stop()
-			soundmanager.loopserver(slide.Name, Rootpart, false)
-			getuptrack:AdjustSpeed(humanoid.WalkSpeed / 9)
-			linearvelocity.Enabled = false
-			humanoid.AutoRotate = true
-			playerstats.SetState(player, "Sliding", false)
-		-- CROUCH: only when standing still on the ground, walkspeed drops to 8
-		elseif not ismoving and not inair and not iscroching then
-			iscroching = true
-			humanoid.WalkSpeed = 8
-			crouchitrack:Play()
-			vaulttrack.Priority = Enum.AnimationPriority.Core -- lowers the vault animation's priority while crouched, set back when standing up
-		-- KNEE TUCK: in the air, stays tucked until the humanoid's next state change (the landing)
-		elseif inair and not playerstats.GetState(player, "Sliding") and not iscroching and not kneetucked then
-			kneetucktrack:Play()
-			playerstats.SetState(player, "KneeTucked", true)
-			humanoid.StateChanged:Wait(Enum.HumanoidStateType.Landed)
-			kneetucktrack:Stop()
-			playerstats.RemoveStats(player, "KneeTucked")
-		end
+	if Inputs.Is(input, "Crouch") then
+		crouchpressed()
 	end
 end)
 
--- releasing C stands back up from a crouch
 UserInputService.InputEnded:Connect(function(input, gameProcessedEvent)
 	if gameProcessedEvent then return end
-	if input.KeyCode == Enum.KeyCode.C then
-		if iscroching then
-			iscroching = false
-			humanoid.WalkSpeed = baseSpeed
-			crouchitrack:Stop()
-			crouchmmtrack:Stop()
-        	vaulttrack.Priority = Enum.AnimationPriority.Action3 -- back to the vault animation's normal priority
-			humanoid.AutoRotate = true
-		end
+	if Inputs.Is(input, "Crouch") then
+		crouchreleased()
 	end	
 end)
 
@@ -411,10 +446,9 @@ local function ledgeGrab(rayroot, raycastparams)
 	end
 end
 
--- Space: pulls up if the player is hanging, otherwise in the air it checks for a ledge to grab or a wall to kick off
-UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
-	if gameProcessedEvent or input.KeyCode ~= Enum.KeyCode.Space then return end
-	-- hanging: Space pulls up, unless the grab or pull up animation is still playing
+-- Space or the mobile jump button: pulls up if the player is hanging, otherwise in the air it checks for a ledge to grab or a wall to kick off
+local function jumpaction()
+	-- hanging: pulls up, unless the grab or pull up animation is still playing
 	if playerstats.GetState(player, "Hanging") then
 		if not ledgehangtrack.IsPlaying and not pulluptrack.IsPlaying then
 			pullUpFromHang()
@@ -444,6 +478,13 @@ UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
 		wallKick(rwallkicktrack, -Rootpart.CFrame.RightVector)
 	elseif leftray and not rightray then
 		wallKick(lwallkicktrack, Rootpart.CFrame.RightVector)
+	end
+end
+
+UserInputService.InputBegan:Connect(function(input, _)
+	--if gameProcessedEvent then return end
+	if Inputs.Is(input, "Jump") then
+		jumpaction()
 	end
 end)
 
@@ -512,8 +553,72 @@ larm.Touched:Connect(handleImpact)
 torso.Touched:Connect(handleImpact)
 Head.Touched:Connect(handleImpact)
 
+-- MOBILE BUTTONS
+-- no keys are given to BindAction, so these buttons only react to touch, the keyboard keeps using the handlers above
+-- dash and run are ONE button, like the shared key on PC: tapping it dashes, holding it runs, both only work while the player is moving
+-- crouch is a hold button (Begin = pressed, End = let go)
+local function dashrunaction(_, inputstate)
+	if inputstate == Enum.UserInputState.Begin then
+		mobilerunheld = true
+		trydash() -- a tap dashes (needs the player to be moving)
+		startrun() -- holding it for 0.24s runs (needs the player to be moving)
+	elseif inputstate == Enum.UserInputState.End or inputstate == Enum.UserInputState.Cancel then
+		mobilerunheld = false
+		task.spawn(stoprun) -- stoprun waits inside, so it runs in its own thread
+	end
+end
+
+local function crouchaction(_, inputstate)
+	if inputstate == Enum.UserInputState.Begin then
+		task.spawn(crouchpressed) -- crouchpressed can wait inside, so it runs in its own thread
+	elseif inputstate == Enum.UserInputState.End or inputstate == Enum.UserInputState.Cancel then
+		crouchreleased()
+	end
+end
+
+contextactionutility:BindAction("DashRun", dashrunaction, true)
+contextactionutility:SetTitle("DashRun", "Dash/Run")
+
+contextactionutility:BindAction("Crouch", crouchaction, true)
+contextactionutility:SetTitle("Crouch", "Crouch")
+
+-- the mobile jump button doesn't send the Space key, so it calls the same function
+if UserInputService.TouchEnabled then
+	local touchgui = player:WaitForChild("PlayerGui"):WaitForChild("TouchGui")
+	local mobilejumpbutton = touchgui:WaitForChild("TouchControlFrame"):WaitForChild("JumpButton")
+	mobilejumpbutton.MouseButton1Down:Connect(jumpaction)
+end
+
+-- removes the buttons when the player dies so they don't stack up after the respawn
+humanoid.Died:Connect(function()
+	contextactionutility:UnbindAction("DashRun")
+	contextactionutility:UnbindAction("Crouch")
+end)
+
 if player.Character then
 	setupHumanoid(player.Character)
 end
+
+local defaultJump = humanoid.JumpPower
+
+local function update()
+	local lv = Rootpart:FindFirstChildOfClass("LinearVelocity")
+	local blocked = lv ~= nil and lv.Enabled
+	humanoid.JumpPower = blocked and 0.00001 or defaultJump
+end
+
+local function watch(child)
+	if child:IsA("LinearVelocity") then
+		child:GetPropertyChangedSignal("Enabled"):Connect(update)
+		update()
+	end
+end
+
+for _, child in Rootpart:GetChildren() do
+	watch(child)
+end
+
+Rootpart.ChildAdded:Connect(watch)
+Rootpart.ChildRemoved:Connect(update)
 
 player.CharacterAdded:Connect(setupHumanoid) -- sets up again after every respawn
