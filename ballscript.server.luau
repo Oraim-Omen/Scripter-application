@@ -12,11 +12,15 @@ local soundmanager = require(replicatedstorage:WaitForChild("Scripts"):WaitForCh
 local events = replicatedstorage:WaitForChild("events")
 local velocityevent = events:WaitForChild("VelocityEvent")
 local catchevent = events:WaitForChild("Catchevent")
+
 local animations = replicatedstorage:WaitForChild("Animations")
+--animations
 local directthrow = animations:WaitForChild("DirectThrow")
 local overheadthrow = animations:WaitForChild("OverHeadThrow")
 local rcurvethrow = animations:WaitForChild("RCurveThrow")
 local lcurvethrow = animations:WaitForChild("LCurveThrow")
+local unbalance = animations:WaitForChild("Unbalance")
+local pushbackcancel = animations:WaitForChild("PushBackCancel")
 
 local ball = script.Parent
 local chargingevent = ball.Events:WaitForChild("ChargingEvent")
@@ -201,6 +205,8 @@ local function applyKnockback(character, direction, duration)
 		end)
 	end
 end
+
+
 
 -- when the ball touches something: wall (miss), catch, or hit
 handle.Touched:Connect(function(hit)
