@@ -2,7 +2,7 @@
 
 Scripts for my 3v3 Roblox dodgeball game, written in Luau. This covers the movement, the ball, and the managers they share.
 
-The work examples aka scripts : Movement (client), localballscript and ballscript
+The work examples aka scripts : Movement (client), localballscript and ballscript ;anything that isn't listed here either is impressive enough or open source 
 
 Demos: [https://www.youtube.com/playlist?list=PLGGtIP81cKgg]
 
