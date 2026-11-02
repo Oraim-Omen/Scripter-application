@@ -1,0 +1,808 @@
+--[[
+
+████████████████████████████████████████████████████████████╗
+╚═══════════════════════════════════════════════════════════╝
+
+ ██████╗ ██████╗ ███╗   ██╗████████╗███████╗██╗  ██╗████████╗
+██╔════╝██╔═══██╗████╗  ██║╚══██╔══╝██╔════╝╚██╗██╔╝╚══██╔══╝
+██║     ██║   ██║██╔██╗ ██║   ██║   █████╗   ╚███╔╝    ██║   
+██║     ██║   ██║██║╚██╗██║   ██║   ██╔══╝   ██╔██╗    ██║   
+╚██████╗╚██████╔╝██║ ╚████║   ██║   ███████╗██╔╝ ██╗   ██║   
+ ╚═════╝ ╚═════╝ ╚═╝  ╚═══╝   ╚═╝   ╚══════╝╚═╝  ╚═╝   ╚═╝   
+                                                             
+        █████╗  ██████╗████████╗██╗ ██████╗ ███╗   ██╗              
+       ██╔══██╗██╔════╝╚══██╔══╝██║██╔═══██╗████╗  ██║              
+       ███████║██║        ██║   ██║██║   ██║██╔██╗ ██║              
+       ██╔══██║██║        ██║   ██║██║   ██║██║╚██╗██║              
+       ██║  ██║╚██████╗   ██║   ██║╚██████╔╝██║ ╚████║              
+       ╚═╝  ╚═╝ ╚═════╝   ╚═╝   ╚═╝ ╚═════╝ ╚═╝  ╚═══╝              
+                                                             
+     ██╗   ██╗████████╗██╗██╗     ██╗████████╗██╗   ██╗           
+     ██║   ██║╚══██╔══╝██║██║     ██║╚══██╔══╝╚██╗ ██╔╝           
+     ██║   ██║   ██║   ██║██║     ██║   ██║    ╚████╔╝            
+     ██║   ██║   ██║   ██║██║     ██║   ██║     ╚██╔╝             
+     ╚██████╔╝   ██║   ██║███████╗██║   ██║      ██║              
+      ╚═════╝    ╚═╝   ╚═╝╚══════╝╚═╝   ╚═╝      ╚═╝                
+
+
+████████████████████████████████████████████████████████████╗
+╚═══════════════════════════════════════════════════════════╝
+ 
+▪ 𝐂𝐨𝐧𝐭𝐞𝐱𝐭𝐀𝐜𝐭𝐢𝐨𝐧𝐔𝐭𝐢𝐥𝐢𝐭𝐲 𝐀𝐏𝐈
+	▪ Properties
+		▪ bool Archivable
+		▪ string ClassName
+		▪ string Name
+		▪ Instance Parent
+	▪ Functions
+		▪ BindAction(string actionName, Function functionToBind, bool createTouchButton, Tuple inputTypes)
+		▪ BindActionAtPriority(string actionName, Function functionToBind, bool createTouchButton, int priorityLevel, Tuple inputTypes)
+		▪ UnbindAction(String actionName)
+		▪ DisableAction(string actionName)
+			▪ Disables action and disconnects events. Works the same as UnbindAction but the button stays.
+			▪ DisableAction is a bit wonky right now.
+		▪ SetTitle(string actionName, string title)
+		▪ SetImage(string actionName, string image)
+		▪ SetPressedColor(string actionName, Color3 color)
+			▪ Sets the pressed color of the button.
+		▪ SetReleasedColor(string actionName, Color3 color)
+			▪ Sets the released color of the button.
+		▪ GetButton(string actionName)
+		▪ MakeButtonRound(actionName, amount)
+			▪ Changes the shape and interaction area of the button.
+		▪ MakeButtonSquare(actionName)
+			▪ Changes the shape and interaction area of the button.
+	▪ Events
+		▪ LocalToolEquipped(Instance toolEquipped)
+		▪ LocalToolUnequipped(Instance toolUnequipped)
+
+
+████████████████████████████████████████████████████████████╗
+╚═══════════════════════════════════════════════════════════╝
+
+▪ 𝐈𝐧𝐟𝐨𝐫𝐦𝐚𝐭𝐢𝐨𝐧
+
+	▪ Written by PseudoPerson
+		▪ https://www.roblox.com/users/1735621911/profile
+	▪ CC BY License (https://creativecommons.org/licenses/by/4.0)
+		▪ Summary: Do what ever you want with the module as long as credit is in the code :)
+	▪ Developer Forum Post: https://devforum.roblox.com/t/easy-mobile-buttons-contextactionutility/804219
+	▪ Cancel UserInputState may not always fire. This is untested.
+
+
+████████████████████████████████████████████████████████████╗
+╚═══════════════════════════════════════════════════════════╝
+
+▪ 𝐕𝐞𝐫𝐬𝐢𝐨𝐧
+
+	▪ v.0.20.10.3
+
+
+████████████████████████████████████████████████████████████╗
+╚═══════════════════════════════════════════════════════════╝
+
+▪ 𝐑𝐞𝐬𝐨𝐮𝐫𝐜𝐞𝐬
+
+	▪ Buttons
+		▪ Default Button:   rbxassetid://5713982324
+		▪ Read Button:      rbxassetid://5743592925
+		▪ Attack Button:    rbxassetid://5743593320
+		▪ Target Button:    rbxassetid://5743593654
+		▪ Hamburger Button: rbxassetid://5743594013
+		▪ ! Button:         rbxassetid://5754149564
+		▪ ? Button:         rbxassetid://5754150372
+		▪ ... Button:       rbxassetid://5754151192
+		▪ - Button:         rbxassetid://5754152113
+		▪ + Button:         rbxassetid://5754152510
+		▪ Cancel Button:    rbxassetid://5754151652
+		▪ Speech Button:    rbxassetid://5754152998
+		▪ Star Button:      rbxassetid://5754153324
+		▪ Sword Button:     rbxassetid://5754154247
+		▪ Sun Button:       rbxassetid://5754154839
+	▪ Developer Forum Post With Vector Images
+		▪ https://devforum.roblox.com/t/easy-mobile-buttons-contextactionutility/804219
+
+
+████████████████████████████████████████████████████████████╗
+╚═══════════════════════════════════════════════════════════╝
+
+]]
+--// 𝐌𝐨𝐝𝐮𝐥𝐞 𝐓𝐚𝐛𝐥𝐞 //--
+local ContextActionUtility = {}
+
+--// 𝐒𝐞𝐫𝐯𝐢𝐜𝐞𝐬 //--
+local ContextActionService = game:GetService("ContextActionService")
+local UserInputService = game:GetService("UserInputService")
+local GuiService = game:GetService("GuiService")
+
+local Players = game:GetService("Players")
+
+--// 𝐕𝐚𝐫𝐢𝐚𝐛𝐥𝐞𝐬 //--
+	--player
+local Player = Players.LocalPlayer
+local PlayerGui = Player:WaitForChild("PlayerGui")
+local JumpButton
+
+	--{actionName = {Name, Button, Slot, Connections}}
+local Buttons = {}
+
+	--holder for all the buttons (always exists, so it doesn't matter when touch becomes available)
+local holderGui = Instance.new("ScreenGui")
+holderGui.Name = "ContextActionButtons"
+holderGui.ResetOnSpawn = false
+holderGui.Parent = PlayerGui
+
+local ButtonHolder = Instance.new("Frame")
+ButtonHolder.BackgroundTransparency = 1
+ButtonHolder.Parent = holderGui
+
+
+--⚫ This can be changed. The indexes are the fill priority (1 being the highest priority).
+--1.1x
+local ButtonPositions = {
+	[1] = UDim2.new(-0.4169, 0, 0.715, 0);
+	[2] = UDim2.new(-0.165, 0, -0.165, 0);
+	[3] = UDim2.new(0.715, 0, -0.4169, 0);
+	[4] = UDim2.new(-1.1077, 0, -0.0396, 0);
+	[5] = UDim2.new(-0.858, 0, -0.858, 0);
+	[6] = UDim2.new(-0.0396, 0, -1.1077, 0);
+}
+
+--// 𝐅𝐮𝐧𝐜𝐭𝐢𝐨𝐧𝐬 //--
+local function GetNextSlot()
+	local takenSlots = {}
+	--Loop makes a table with button slot numbers as indexes
+	for actionName, buttonData in pairs(Buttons) do
+		takenSlots[buttonData.Slot] = true
+	end
+	--Loop looks for first open slot
+	for i = 1, #ButtonPositions do
+		if not takenSlots[i] then
+			--Returns first open slot
+			return i
+		end
+	end
+	--If no open slot is found function returns nil
+	return nil
+end
+
+local function ConnectButton(actionName, functionToBind)
+	local data = Buttons[actionName]
+	local button = data.Button
+	local connections = data.Connections or {}
+	
+	local function inputBeganHandler(inputObject)
+		
+		--Feeds correct input into the function
+		functionToBind(actionName, Enum.UserInputState.Begin, inputObject)
+		button.ImageColor3 = button.BorderColor3
+		local title = button:FindFirstChild("title")
+		if title then
+			title.TextColor3 = button.BorderColor3
+		end
+	end
+	connections.Begin = button.InputBegan:Connect(inputBeganHandler)
+	
+	local function inputChangedHandler(inputObject)
+		--Feeds correct input into the function
+		functionToBind(actionName, Enum.UserInputState.Change, inputObject)
+	end
+	connections.Changed = button.InputChanged:Connect(inputChangedHandler)
+	
+	local function inputEndedHandler(inputObject)
+		--Feeds correct input into the function
+		functionToBind(actionName, Enum.UserInputState.End, inputObject)
+		button.ImageColor3 = button.BackgroundColor3
+		local title = button:FindFirstChild("title")
+		if title then
+			title.TextColor3 = button.BackgroundColor3
+		end
+	end
+	connections.MenuOpened = GuiService.MenuOpened:Connect(inputEndedHandler)
+	connections.End = button.InputEnded:Connect(inputEndedHandler)
+	
+	--Roblox touch support is wonky. This makes it so it (probably) always looks right.
+	local function mouseLeaveHandler()
+		button.ImageColor3 = button.BackgroundColor3
+		local title = button:FindFirstChild("title")
+		if title then
+			title.TextColor3 = button.BackgroundColor3
+		end
+	end
+	button.MouseLeave:Connect(mouseLeaveHandler)
+end
+
+local function DisconnectButton(actionName)
+	local data = Buttons[actionName]
+	if not data.Connections then return end
+	for i, p in pairs(data.Connections) do
+		if p then
+			p:Disconnect()
+		end
+	end
+	--Will do some testing to see if this is needed ¯\_(ツ)_/¯
+	data.Connections = {}
+end
+
+local function newDefaultButton(actionName, slot)
+	local newButton
+	newButton = Instance.new("ImageButton")
+	newButton.Name = actionName.."Button"
+	newButton.BackgroundTransparency = 1
+	newButton.Size = UDim2.new(0.8, 0, 0.8, 0)
+	newButton.Image = "rbxassetid://5713982324"
+	newButton.ImageTransparency = 0.5
+	newButton.AnchorPoint = Vector2.new(0.5, 0.5)
+	--Used for unactived color
+	newButton.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+	--Used for activated color
+	newButton.BorderColor3 = Color3.fromRGB(125, 125, 125)
+	
+	--Without this the jump button locks in the jump state because the input ends incorrectly. Dont let the button hitboxes overlap the jump button hit box.
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0.5, 0)
+	corner.Parent = newButton
+	
+	newButton.Position = ButtonPositions[slot]
+	return newButton
+end
+
+local function BindButton(actionName, functionToBind)
+	local button
+	local slot
+	local data = Buttons[actionName]
+	if data then
+		print("is Data")
+		if data.Connections then
+			print("is Connections")
+			DisconnectButton(actionName)
+		end
+		if data.Slot then
+			print("is Slot")
+			slot = data.Slot
+		else
+			slot = GetNextSlot()
+		end
+		if data.Button then
+			print("is Button")
+			button = data.Button
+			--Will do some testing to see if this is needed ¯\_(ツ)_/¯
+			button.ImageColor3 = button.BackgroundColor3
+			local title = button:FindFirstChild("title")
+			if title then
+				title.TextColor3 = button.BackgroundColor3
+			end
+		else
+			button = newDefaultButton(actionName, slot)
+		end
+		
+	else
+		slot = GetNextSlot()
+		button = newDefaultButton(actionName, slot)
+	end
+	
+	button.Parent = ButtonHolder
+	
+	Buttons[actionName] = {["Name"] = actionName, ["Button"] = button, ["Slot"] = slot, ["Connections"] = {}}
+	--Should I use OOP? Probably. Am I using Lua's weird table based OOP? No.
+	ConnectButton(actionName, functionToBind)
+end
+
+local function UnbindButton(actionName)
+	--Gets button data
+	local data = Buttons[actionName]
+	if not data then return end
+	--Disconnects connections
+	DisconnectButton(actionName)
+	if data.Button then
+		data.Button:Destroy()
+	end
+	--Need to test if this line will do everything. I believe this leaks or something b|c it's just parenting the data to nil.
+	Buttons[actionName] = nil
+end
+
+local function DisableButton(actionName)
+	local data = Buttons[actionName]
+	if not data then return end
+	DisconnectButton(actionName)
+
+	local button = data.Button
+	button.ImageColor3 = button.BackgroundColor3
+	local title = button:FindFirstChild("title")
+	if title then
+		title.TextColor3 = button.BackgroundColor3
+	end
+end
+
+	--Only show the buttons when the player's last input was touch
+local function UpdateVisibility(inputType)
+	if inputType == Enum.UserInputType.Touch then
+		holderGui.Enabled = true
+	elseif inputType == Enum.UserInputType.Keyboard
+		or inputType.Name:find("Mouse")
+		or inputType.Name:find("Gamepad") then
+		holderGui.Enabled = false
+	end
+end
+UpdateVisibility(UserInputService:GetLastInputType())
+UserInputService.LastInputTypeChanged:Connect(UpdateVisibility)
+
+	--TouchGui only exists once touch controls are active, so this waits for it in the background
+task.spawn(function()
+	local TouchGui = PlayerGui:WaitForChild("TouchGui")
+	JumpButton = TouchGui:WaitForChild("TouchControlFrame"):WaitForChild("JumpButton")
+	holderGui.IgnoreGuiInset = TouchGui.IgnoreGuiInset
+
+	--Keeps the holder on top of the jump button so the button positions stay the same
+	local function syncHolder()
+		ButtonHolder.Position = UDim2.fromOffset(JumpButton.AbsolutePosition.X, JumpButton.AbsolutePosition.Y)
+		ButtonHolder.Size = UDim2.fromOffset(JumpButton.AbsoluteSize.X, JumpButton.AbsoluteSize.Y)
+	end
+	syncHolder()
+	JumpButton:GetPropertyChangedSignal("AbsolutePosition"):Connect(syncHolder)
+	JumpButton:GetPropertyChangedSignal("AbsoluteSize"):Connect(syncHolder)
+
+	--Default jump button can get stuck in the down position. Using a newish ui thing to fix this
+	local uiCorner = Instance.new("UICorner")
+	uiCorner.CornerRadius = UDim.new(0.5, 0)
+	uiCorner.Parent = JumpButton
+end)
+
+--// 𝐌𝐨𝐝𝐮𝐥𝐞 𝐕𝐚𝐫𝐢𝐚𝐛𝐥𝐞𝐬 //--
+	--Properties
+ContextActionUtility.Archivable = ContextActionService.Archivable
+ContextActionUtility.ClassName = ContextActionService.ClassName
+ContextActionUtility.Name = ContextActionService.Name
+ContextActionUtility.Parent = ContextActionService.Parent
+
+	--Events
+ContextActionUtility.LocalToolEquipped = ContextActionService.LocalToolEquipped
+ContextActionUtility.LocalToolUnequipped = ContextActionService.LocalToolUnequipped
+
+--// 𝐌𝐨𝐝𝐮𝐥𝐞 𝐅𝐮𝐧𝐜𝐭𝐢𝐨𝐧𝐬 //--
+function ContextActionUtility:BindAction(actionName, functionToBind, createTouchButton, ...)
+	ContextActionService:BindAction(actionName, functionToBind, false, ...)
+	if createTouchButton then
+		BindButton(actionName, functionToBind)
+	end
+end
+
+function ContextActionUtility:BindActionAtPriority(actionName, functionToBind, createTouchButton, priorityLevel, ...)
+	ContextActionService:BindAction(actionName, functionToBind, false, priorityLevel, ...)
+	if createTouchButton then
+		BindButton(actionName, functionToBind)
+	end
+end
+
+function ContextActionUtility:UnbindAction(actionName)
+	ContextActionService:UnbindAction(actionName)
+	UnbindButton(actionName)
+end
+
+	--Added functionality: Disconnects events but the button stays. Effects that can be chosen: Shrink alpha, Fade alpha, Darken alpha
+function ContextActionUtility:DisableAction(actionName, effectList)
+	ContextActionService:UnbindAction(actionName)
+	DisableButton(actionName, effectList)
+end
+
+function ContextActionUtility:SetTitle(actionName, title)
+	local data = Buttons[actionName]
+	if not data then return end
+	if not title then
+		title = actionName
+	end
+	local button = data.Button
+	if not button then return end
+	local textLabel = button:FindFirstChild("title")
+	if not textLabel then
+		textLabel = Instance.new("TextLabel")
+		textLabel.Name = "title"
+		textLabel.AnchorPoint = Vector2.new(0.5, 0.5)
+		textLabel.Position = UDim2.new(0.5, 0, 0.5, 0)
+		textLabel.BackgroundTransparency = 1
+		textLabel.Size = UDim2.new(0.75, 0, 0.45, 0)
+		textLabel.Font = Enum.Font.SourceSansBold
+		textLabel.TextScaled = true
+		textLabel.TextTransparency = 0.5
+		textLabel.TextColor3 = Color3.new(255, 255, 255)
+		textLabel.TextXAlignment = Enum.TextXAlignment.Center
+		textLabel.TextYAlignment = Enum.TextYAlignment.Center
+	end
+	textLabel.Visible = true
+	textLabel.Text = title
+	textLabel.Parent = button
+end
+
+function ContextActionUtility:SetImage(actionName, image)
+	local data = Buttons[actionName]
+	if not data then return end
+	data.Button.Image = image
+end
+
+	--Added functionality: Color of pressed button.
+function ContextActionUtility:SetPressedColor(actionName, color)
+	local data = Buttons[actionName]
+	if not data then return end
+	local button = data.Button
+	if not button then return end
+	print("Setting Pressed Color")
+	button.BorderColor3 = color
+end
+
+	--Added functionality: Color of released button
+function ContextActionUtility:SetReleasedColor(actionName, color)
+	local data = Buttons[actionName]
+	if not data then return end
+	local button = data.Button
+	if not button then return end
+	button.ImageColor3 = color
+	button.BackgroundColor3 = color
+	local title = button:FindFirstChild("title")
+	if title then
+		title.TextColor3 = color
+	end
+end
+
+	--Added functionality: Shape of button and interaction box
+function ContextActionUtility:MakeButtonSquare(actionName)
+	local data = Buttons[actionName]
+	if not data then return end
+	local button = data.Button
+	if not button then return end
+	
+	local corner = button:FindFirstChildOfClass("UICorner")
+	if corner then 
+		corner.CornerRadius = UDim.new(0, 0)
+	end
+end
+
+	--Added functionality: Shape of button and interaction box
+function ContextActionUtility:MakeButtonRound(actionName, amount)
+	local data = Buttons[actionName]
+	if not data then return end
+	local button = data.Button
+	if not button then return end
+	
+	local corner = button:FindFirstChildOfClass("UICorner")
+	if not corner then 
+		local corner = Instance.new("UICorner", button)
+	end
+	if not amount then
+		amount = 0.5
+	end
+	corner.CornerRadius = UDim.new(amount, 0)
+end
+
+
+function ContextActionUtility:GetButton(actionName)
+	local data = Buttons[actionName]
+	if not data then return nil end
+	return data.Button
+end
+
+return ContextActionUtility
+local CooldownManager = {}
+
+local ABILITIES = {
+	Dash 		= {maxCharges = 2, rechargeTime = 4 },
+	DashInterrupt	= {maxCharges = 1, rechargeTime = 3 },
+    Hang = {maxCharges = 1, rechargeTime = 0.1}, -- prevents spamming of hanging
+	WallKick = { maxCharges = 3, rechargeTime = 5},
+}
+
+local charges = {} -- table to hold the current charges for each ability
+
+local function getCharges(name) -- retrieves the current charges for a specific ability
+	if charges[name] == nil then -- a check if the ablitiy exists in the charges table
+		charges[name] = ABILITIES[name].maxCharges -- gets the max charges the ablity
+	end
+	return charges[name] -- return the current charges for the ability
+end
+
+function CooldownManager:Use(name)
+	charges[name] -= 1 -- reduce the current charges for the ability by 1
+	local ability = ABILITIES[name]
+
+	task.delay(ability.rechargeTime, function() -- delay the recharge of the ability
+		charges[name] = math.min(ability.maxCharges, charges[name] + 1) -- increase the current charges for the ability by 1, but not exceeding the max charges
+	end)
+end
+
+function CooldownManager:CanUse(name) 
+	if getCharges(name) > 0 then -- check if there are any charges available for the ability
+		self:Use(name) -- use the ability if there are charges available
+		return true -- return true to indicate that the ability can be used
+	end
+	return false -- return false to indicate that the ability cannot be used
+end
+
+function CooldownManager:ResetCharges(name) 
+	local ability = ABILITIES[name]
+	if ability then -- check if the ability exists in the ABILITIES table
+		charges[name] = ability.maxCharges -- reset the current charges for the ability to its max charges
+	end
+end
+
+return CooldownManager -- return the CooldownManager module so it can be used by other scripts
+local UserInputService = game:GetService("UserInputService")
+
+local Inputs = {}
+
+local actions = {
+	Catch = {Enum.KeyCode.F, Enum.KeyCode.ButtonX},
+	CancelCharge = {Enum.KeyCode.V, Enum.KeyCode.DPadUp},
+	TogglePass = {Enum.KeyCode.R, Enum.KeyCode.ButtonL2},
+	Dash = {Enum.KeyCode.Q, Enum.KeyCode.ButtonB},
+	Run = {Enum.KeyCode.Q, Enum.KeyCode.ButtonB},
+	Crouch = {Enum.KeyCode.C, Enum.KeyCode.ButtonL3}, -- also slide and knee tuck
+	Jump = {Enum.KeyCode.Space, Enum.KeyCode.ButtonA}, -- also ledge grab and wall kick
+}
+
+-- keeps track of every button that is currently being held
+local held = {}
+UserInputService.InputBegan:Connect(function(input)
+	held[input.KeyCode] = true
+end)
+UserInputService.InputEnded:Connect(function(input)
+	held[input.KeyCode] = false
+end)
+
+function Inputs.Is(input, actionName)
+	local list = actions[actionName]
+	return table.find(list, input.KeyCode) or table.find(list, input.UserInputType)
+end
+
+-- true while any button of the action is being held
+function Inputs.IsDown(actionName)
+	for _, key in actions[actionName] do
+		if held[key] then
+			return true
+		end
+	end
+	return false
+end
+
+return Inputs
+local playerstats = {} -- module table to hold the functions and data for player stats
+local states = {} -- table to hold the states for each player
+
+function playerstats.ReturnStates(plr)
+	return states[plr] -- returns the table of states for the player, or nil if no states exist
+end
+
+function playerstats.GetState(plr, statekey)
+	if states[plr] then -- check if the player has any states	
+		return states[plr][statekey] -- return the value of the specific statekey
+	end
+	return nil -- return nil if the player has no states
+end
+
+function playerstats.SetState(plr, statekey, value, duration)
+	if not states[plr] then -- check if the player is in the states table, if not create a new table for them
+		states[plr] = {} -- create a new table for the player to hold their states
+	end
+	states[plr][statekey] = value -- set the value of the specific statekey for the player
+	if duration and type(duration) == "number" then -- check if a duration is provided and is a number
+		task.delay(duration, function() -- delays the next funaction for removing the state
+			if states[plr] and states[plr][statekey] == value then -- A check to prevent an error
+				states[plr][statekey] = nil -- remove the statekey from the player's states table
+				if next(states[plr]) == nil then -- check if the player's states table is empty
+					states[plr] = nil -- remove the player's states table if it's empty
+				end
+			end
+		end)
+	end
+end
+
+function playerstats.RemoveStats(plr, statekey)
+	if not states[plr] then return end -- check if the player has any states, if not return
+	if statekey then  -- check if a statekey is provided
+		states[plr][statekey] = nil -- remove the specific statekey from the player's states table
+		if next(states[plr]) == nil then -- check if the player's states table is empty
+			states[plr] = nil -- remove the player's states table if it's empty
+		end
+	else
+		states[plr] = nil -- remove the player's states table if no statekey is provided
+	end
+end
+-- this is meant is a true reset for bugs ... reading back  i don't know why i writen 2 funactions doing nearly identical things
+function playerstats.ClearAllStats(plr)
+	if states[plr] then -- check if the player has any states
+		for statekey in pairs(states[plr]) do -- a loop to iterate through all the statekeys for the player
+			plr:SetAttribute(statekey, nil) -- remove the attribute for the statekey from the player
+		end
+	end
+	states[plr] = nil -- remove the player's states table from the states table
+end
+
+game.Players.PlayerRemoving:Connect(function(plr)
+	states[plr] = nil -- clear the states for the player when they leave the game (avoids memory leaks)
+end)
+
+return playerstats -- return the playerstats module so it can return values to other scripts that require it
+
+local RunService = game:GetService("RunService") -- used to check if this code is running on the server or the client
+local debris = game:GetService("Debris") -- used to clean up sounds after they finish
+local replicatedstorage = game:GetService("ReplicatedStorage") -- where the remote events are stored
+
+-- remote event used to play a one-shot sound for every player
+local emitsound = replicatedstorage:WaitForChild("events"):WaitForChild("EmitSound")
+-- remote event used to play a looping sound for every player
+local loopsoundevent = replicatedstorage:WaitForChild("events"):WaitForChild("LoopSound")
+
+local sound = {} -- the module table, everything inside it can be used by other scripts
+
+-- function to randomize the pitch of a sound object to add variety to the sound effects
+local function soundspeed(soundobj) -- takes a sound object as an argument
+	local base = soundobj:GetAttribute("BaseSpeed") -- checks if the original speed was already saved on this sound
+	if not base then
+		base = soundobj.PlaybackSpeed -- takes the current playback speed for sounds that aren't playbackspeed 1
+		soundobj:SetAttribute("BaseSpeed", base) -- sets the base speed for the sound object so it can be used for future calls to this function
+	end
+
+	local randompitch = math.random(9, 11) / 10 -- randomly generates a pitch value between 0.9 and 1.1
+	soundobj.PlaybackSpeed = base * randompitch -- sets the playback speed
+end
+
+-- main function to play sounds either by a loop or a part
+function sound.play(name, part, loop) -- name = the sound object, part = where it plays from, loop = true to keep it playing
+	if not name then return end -- stops if no sound was given
+	local soundobj = name:Clone() -- clone so the same sound can be played multiple times at once
+	if not part then
+		soundobj.Parent = workspace -- if no part is provided, the sound will be played in the workspace
+	else
+		soundobj.Parent = part -- the part the sounds will be played from
+	end
+	soundspeed(soundobj) -- sets random pitch
+	if not soundobj.IsLoaded then  -- just a check to make sure the sound is loaded
+		soundobj.Loaded:Wait() -- waits until the sound has finished loading
+	end
+	soundobj:Play() -- plays the sound
+	if loop then return end -- if loop is true, the sound will loop and not be deleted
+	debris:AddItem(soundobj, soundobj.TimeLength / soundobj.PlaybackSpeed) -- deletes the sound once it finishes (length divided by speed since the pitch changes how long it takes)
+end
+
+-- function to stop a looped sound by name and part, it will remove the sound object from the part
+function sound.stoploop(name, part)
+	local soundobj = part:FindFirstChild(name) -- finds the sound object by name in the part
+ 	debris:AddItem(soundobj, 0) -- removes the sound object from the part immediately
+end	
+
+-- function to start or stop a looping sound for everyone, called from a client
+function sound.loopserver(name, part, loop)
+	if not name then return end -- stops if no sound was given
+	if not loop then
+		sound.stoploop(name, part) -- if loop is false, stop the loop on this client right away
+	end
+	loopsoundevent:FireServer(name, part, loop) -- tells the server so it can pass it on to everyone else
+end	
+
+-- function to play a one-shot sound for everyone, called from a client
+function sound.EmitServer(name, part, loop)
+	if not name then return end -- stops if no sound was given
+	emitsound:FireServer(name, part, loop) -- sends the sound info to the server
+end
+
+-- server side: receives the request from a client and sends it to every client
+if RunService:IsServer() then
+	emitsound.OnServerEvent:Connect(function(_, name, part, loop) -- the first argument is the player who fired it, not needed here
+		emitsound:FireAllClients(name, part, loop) -- makes every client play the sound
+	end)
+else
+	emitsound.OnClientEvent:Connect(sound.play) -- client side: when the server says so, play the sound
+end
+
+-- same idea as above but for looping sounds
+if RunService:IsServer() then
+	loopsoundevent.OnServerEvent:Connect(function(_, name, part, loop)
+		if not loop then return end -- the server only passes on loops that are starting, not stopping
+		loopsoundevent:FireAllClients(name, part, loop) -- makes every client start the looping sound
+	end)
+else
+	loopsoundevent.OnClientEvent:Connect(sound.play) -- client side: when the server says so, play the looping sound
+end
+
+return sound -- gives the module table to whatever script requires it
+-- to sum up this module is to check if a player can do an action 
+--based on their current state and cooldowns
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local playerstats = require(ReplicatedStorage.Scripts.PlayerStats)
+local cooldownmanger = require(ReplicatedStorage.Scripts.CoolDownManager)
+
+local CanPlayer = {} -- ta
+
+function CanPlayer.CanDash(plr) -- a check to see if the player can dash it is on the name
+	if playerstats.GetState(plr, "Dashing") then return false end -- blow it is list of the things of the states that returns false
+	if playerstats.GetState(plr, "Vaulting") then return false end
+    if playerstats.GetState(plr, "Sliding") then return false end
+    if playerstats.GetState(plr, "Unbalance") then return false end
+    if playerstats.GetState(plr, "StanceTaken") then return false end
+    if playerstats.GetState(plr, "Catching") then return false end
+    if playerstats.GetState(plr, "Hanging") then return false end
+    if playerstats.GetState(plr, "WallKicking") then return false end
+    if playerstats.GetState(plr, "Bumbed") then return false end
+	return cooldownmanger:CanUse("Dash") -- is a check for ablities  that have cooldown and use it,
+end
+
+function CanPlayer.CanDashInterrupt(plr)
+	if playerstats.GetState(plr, "Vaulting") then return false end
+    if playerstats.GetState(plr, "Sliding") then return false end
+    if playerstats.GetState(plr, "Unbalance") then return false end
+    if playerstats.GetState(plr, "StanceTaken") then return false end
+    if playerstats.GetState(plr, "Catching") then return false end
+    if playerstats.GetState(plr, "Hanging") then return false end
+    if playerstats.GetState(plr, "WallKicking") then return false end
+    if playerstats.GetState(plr, "Bumbed") then return false end
+	return cooldownmanger:CanUse("DashInterrupt")
+end
+
+function CanPlayer.CanCatch(plr)
+	if playerstats.GetState(plr, "Dashing") then return false end
+	if playerstats.GetState(plr, "Sliding") then return false end
+    if playerstats.GetState(plr, "Vaulting") then return false end
+    if playerstats.GetState(plr, "Unbalance") then return false end
+    if playerstats.GetState(plr, "StanceTaken") then return false end
+    if playerstats.GetState(plr, "Catching") then return false end
+    if playerstats.GetState(plr, "Bumbed") then return false end 
+	return true
+end
+
+function CanPlayer.CanVault(plr)
+    if playerstats.GetState(plr, "Dashing") then return false end
+    if playerstats.GetState(plr, "Sliding") then return false end
+    if playerstats.GetState(plr, "Vaulting") then return false end
+    if playerstats.GetState(plr, "Catching") then return false end
+    if playerstats.GetState(plr, "StanceTaken") then return false end
+    if playerstats.GetState(plr, "Unbalance") then return false end
+    if playerstats.GetState(plr, "Bumbed") then return false end 
+    return true
+end
+function CanPlayer.CanSlide(plr)
+	if playerstats.GetState(plr, "Sliding") then return false end
+	if playerstats.GetState(plr, "Dashing") then return false end
+	if playerstats.GetState(plr, "Vaulting") then return false end
+    if playerstats.GetState(plr, "Catching") then return false end
+    if playerstats.GetState(plr, "StanceTaken") then return false end
+    if playerstats.GetState(plr, "Unbalance") then return false end
+    if playerstats.GetState(plr, "Bumbed") then return false end     
+	return true
+end
+
+function CanPlayer.CanHang(plr)
+    if playerstats.GetState(plr, "Dashing") then return false end
+    if playerstats.GetState(plr, "Sliding") then return false end
+    if playerstats.GetState(plr, "Vaulting") then return false end
+    if playerstats.GetState(plr, "Catching") then return false end
+    if playerstats.GetState(plr, "StanceTaken") then return false end
+    if playerstats.GetState(plr, "Unbalance") then return false end
+    if playerstats.GetState(plr, "Bumbed") then return false end     
+    if playerstats.GetState(plr, "Hanging") then return false end
+    return cooldownmanger:CanUse("Hang")
+end
+
+function CanPlayer.CanWallKick(plr)
+    if playerstats.GetState(plr, "Dashing") then return false end
+    if playerstats.GetState(plr, "Sliding") then return false end
+    if playerstats.GetState(plr, "Vaulting") then return false end
+    if playerstats.GetState(plr, "Catching") then return false end
+    if playerstats.GetState(plr, "StanceTaken") then return false end
+    if playerstats.GetState(plr, "Unbalance") then return false end
+    if playerstats.GetState(plr, "Hanging") then return false end
+    if playerstats.GetState(plr, "Bumbed") then return false end     
+    return cooldownmanger:CanUse("WallKick")
+end
+
+function CanPlayer.CanThrow(plr)
+    if playerstats.GetState(plr, "Dashing") then return false end
+    if playerstats.GetState(plr, "Sliding") then return false end
+    if playerstats.GetState(plr, "Vaulting") then return false end
+    if playerstats.GetState(plr, "Catching") then return false end
+    if playerstats.GetState(plr, "StanceTaken") then return false end
+    if playerstats.GetState(plr, "Unbalance") then return false end
+    if playerstats.GetState(plr, "Hanging") then return false end
+    if playerstats.GetState(plr, "Bumbed") then return false end     
+    return true
+end
+
+return CanPlayer
